@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0e1018">
+  <title>Ta-Te-Ti 3D · 3 fichas</title>
+  <meta name="description" content="Ta-Te-Ti 3D de 3 fichas: colocá, movés y armá tres en línea. Jugá contra la compu, de a dos o en línea.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23151925'/%3E%3Ccircle cx='10' cy='10' r='5' fill='none' stroke='%233cdc78' stroke-width='3'/%3E%3Cpath d='M17 17L27 27M27 17L17 27' stroke='%23f04848' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Acá p5 pone el lienzo 3D -->
+  <div id="lienzo" role="img" aria-label="Tablero 3D de Ta-Te-Ti"></div>
+
+  <!-- ======================= HUD (durante la partida) ======================= -->
+  <div id="hud" class="oculto">
+    <div id="hud-sup">
+      <button id="btn-menu" class="btn chico" type="button">☰ Menú</button>
+      <div id="hud-centro" aria-live="polite">
+        <div id="hud-turno" class="turno">Tu turno</div>
+        <div id="hud-ayuda"></div>
+      </div>
+      <div id="hud-yo">
+        <span id="hud-ficha" aria-hidden="true"></span>
+        <span id="hud-rol"></span>
+      </div>
+    </div>
+    <div id="hud-inf">
+      <span id="hud-conexion" class="chip oculto">Conectado</span>
+      <span id="hud-giro" class="chip oculto">Tablero giratorio</span>
+      <button id="btn-vista" class="btn chico" type="button" title="Volver la cámara a su posición inicial">⟲ Centrar vista</button>
+    </div>
+  </div>
+
+  <!-- ===================== Fin de partida / desconexión ===================== -->
+  <div id="fin" class="panel-flotante oculto" role="dialog" aria-live="assertive" aria-labelledby="fin-titulo">
+    <h2 id="fin-titulo">¡Ganaste!</h2>
+    <p id="fin-texto"></p>
+    <div class="fila-botones">
+      <button id="btn-revancha" class="btn primario" type="button">Revancha</button>
+      <button id="btn-fin-menu" class="btn" type="button">Volver al menú</button>
+    </div>
+  </div>
+
+  <!-- ============================ PANTALLAS ============================ -->
+
+  <!-- Menú principal -->
+  <section id="pantalla-menu" class="pantalla">
+    <div class="tarjeta">
+      <h1>Ta-Te-Ti 3D</h1>
+      <p class="sub">Tres fichas, un tablero que se mueve. <strong>Pensá antes de mover.</strong></p>
+
+      <div class="columna-botones">
+        <button id="btn-ia" class="btn grande primario" type="button">🤖 Contra la compu</button>
+        <button id="btn-dos" class="btn grande" type="button">👥 Dos jugadores (mismo dispositivo)</button>
+        <button id="btn-online" class="btn grande" type="button">🌐 Jugar online</button>
+        <button id="btn-reglas" class="btn" type="button">📖 ¿Cómo se juega?</button>
+      </div>
+
+      <label class="opcion">
+        <input type="checkbox" id="chk-giratorio">
+        <span><strong>Tablero giratorio</strong><br>
+          <small>Después de cada jugada el tablero gira 90° al azar. Entrena la rotación mental.</small></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- Dificultad contra la compu -->
+  <section id="pantalla-ia" class="pantalla oculto">
+    <div class="tarjeta">
+      <h2>Contra la compu</h2>
+      <p class="sub">Vos jugás con los <strong>círculos verdes</strong>. Elegí la dificultad:</p>
+      <div class="columna-botones">
+        <button class="btn grande btn-nivel" data-nivel="facil" type="button">🙂 Fácil <small>(a veces juega sin pensar)</small></button>
+        <button class="btn grande btn-nivel" data-nivel="medio" type="button">🤔 Medio <small>(te bloquea y aprovecha errores)</small></button>
+        <button class="btn grande btn-nivel" data-nivel="dificil" type="button">😈 Difícil <small>(piensa varias jugadas por delante)</small></button>
+      </div>
+      <button class="btn volver" data-volver="menu" type="button">← Volver</button>
+    </div>
+  </section>
+
+  <!-- Online -->
+  <section id="pantalla-online" class="pantalla oculto">
+    <div class="tarjeta ancha">
+      <h2>Jugar online</h2>
+
+      <!-- Paso 1: elegir crear o unirse -->
+      <div id="online-inicio">
+        <div class="dos-columnas">
+          <div class="caja">
+            <h3>Crear una sala</h3>
+            <p>Vos sos el <strong>Jugador 1</strong> (círculos verdes) y empezás. Te damos un código para pasarle a tu rival.</p>
+            <label class="opcion chica">
+              <input type="checkbox" id="chk-giratorio-online">
+              <span>Tablero giratorio</span>
+            </label>
+            <button id="btn-crear-sala" class="btn grande primario" type="button">Crear sala</button>
+          </div>
+          <div class="caja">
+            <h3>Unirme a una sala</h3>
+            <p>Vas a ser el <strong>Jugador 2</strong> (cruces rojas). Escribí el código que te pasó tu rival.</p>
+            <input id="input-codigo" class="campo-codigo" type="text" inputmode="text" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" maxlength="4" placeholder="ABCD"
+                   aria-label="Código de la sala (4 caracteres)">
+            <button id="btn-conectar" class="btn grande primario" type="button">Conectar</button>
+          </div>
+        </div>
+        <p class="aviso">
+          ⚠️ <strong>Ojo con las redes con firewall</strong> (como el wifi de escuelas o de trabajos): la conexión
+          directa entre dos dispositivos puede fallar. Si pasa, probá con <strong>datos móviles</strong>.
+        </p>
+      </div>
+
+      <!-- Paso 2 (anfitrión): mostrar el código y esperar -->
+      <div id="online-sala" class="oculto">
+        <p>Pasale este código a tu rival:</p>
+        <div id="codigo-sala" class="codigo-grande" aria-live="polite">····</div>
+        <div class="fila-botones">
+          <button id="btn-copiar" class="btn" type="button">📋 Copiar</button>
+        </div>
+        <p id="online-sala-estado" class="estado-espera">Esperando rival...</p>
+      </div>
+
+      <!-- Paso 2 (invitado): conectando -->
+      <div id="online-conectando" class="oculto">
+        <p id="online-conectando-texto" class="estado-espera">Conectando...</p>
+      </div>
+
+      <p id="online-msg" class="mensaje oculto" role="alert"></p>
+
+      <button id="btn-online-volver" class="btn volver" type="button">← Volver</button>
+    </div>
+  </section>
+
+  <!-- Reglas -->
+  <section id="pantalla-reglas" class="pantalla oculto">
+    <div class="tarjeta ancha">
+      <h2>¿Cómo se juega?</h2>
+      <ol class="reglas">
+        <li><strong>Colocar:</strong> cada jugador tiene <strong>3 fichas</strong>. Las ponen de a una por turno en casillas vacías (tocá la casilla).</li>
+        <li><strong>Mover:</strong> cuando ya están las 6 fichas, en cada turno <strong>tenés que mover</strong> una ficha tuya a una casilla vacía de al lado: <strong>arriba, abajo, izquierda o derecha. No en diagonal.</strong>
+          Tocá tu ficha (se levanta) y después una casilla celeste.</li>
+        <li><strong>Ganar:</strong> armá <strong>3 en línea</strong> (fila, columna o diagonal), incluso al colocar.</li>
+        <li><strong>Empate:</strong> si pasan 40 movimientos sin ganador.</li>
+        <li><strong>Cámara:</strong> arrastrá con el mouse o el dedo para girar la vista. Rueda o pellizco para acercar. Un toque corto es una jugada.</li>
+        <li><strong>Tablero giratorio (opcional):</strong> después de cada jugada el tablero gira 90°. Tenés que volver a ubicarte: ¡entrenamiento mental!</li>
+      </ol>
+      <p class="sub">Las casillas se numeran así: <code>0 1 2 / 3 4 5 / 6 7 8</code></p>
+      <button class="btn volver" data-volver="menu" type="button">← Volver</button>
+    </div>
+  </section>
+
+  <noscript><div class="pantalla"><div class="tarjeta"><p>Este juego necesita JavaScript.</p></div></div></noscript>
+
+  <!-- ===== Orden de scripts: p5 (CDN), PeerJS (CDN), después los míos ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="tateti-logica.js"></script>
+  <script src="online.js"></script>
+  <script src="tateti-3d.js"></script>
+  <script src="sketch.js"></script>
+</body>
+</html>
